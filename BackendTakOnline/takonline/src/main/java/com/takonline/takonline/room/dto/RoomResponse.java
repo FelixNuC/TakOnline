@@ -2,6 +2,8 @@ package com.takonline.takonline.room.dto;
 
 import java.util.List;
 
+import com.takonline.takonline.room.model.Room;
+
 public class RoomResponse {
 
     private String roomCode;
@@ -28,4 +30,24 @@ public class RoomResponse {
     public List<String> getPlayers() {
         return players;
     }
+
+    public RoomResponse joinRoom(String code, String playerName) {
+    validatePlayerName(playerName);
+
+    Room room = roomRepository.findByCode(code)
+            .orElseThrow(() -> new IllegalArgumentException("Room not found"));
+
+    if (room.isFull()) {
+        throw new IllegalStateException("Room is full");
+    }
+
+    room.addPlayer(playerName);
+    roomRepository.save(room);
+
+    RoomResponse response = mapToResponse(room);
+
+    messagingTemplate.convertAndSend("/topic/rooms/" + code, response);
+
+    return response;
+}
 }
