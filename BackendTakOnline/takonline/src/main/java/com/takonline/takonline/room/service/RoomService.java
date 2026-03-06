@@ -5,13 +5,14 @@ import com.takonline.takonline.room.dto.RoomResponse;
 import com.takonline.takonline.room.model.Room;
 import com.takonline.takonline.room.repository.RoomRepository;
 import org.springframework.stereotype.Service;
-
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import java.util.Random;
 
 @Service
 public class RoomService {
 
     private final RoomRepository roomRepository;
+    private final SimpMessagingTemplate messagingTemplate;
     private final Random random = new Random();
 
     public RoomService(RoomRepository roomRepository) {
