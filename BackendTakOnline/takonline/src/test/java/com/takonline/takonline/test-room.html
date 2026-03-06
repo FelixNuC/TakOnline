@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tak Room WebSocket Test</title>
+</head>
+<body>
+  <h1>Tak Room WebSocket Test</h1>
+
+  <label>Room code:</label>
+  <input id="roomCode" value="3WGSGY" />
+  <button onclick="connect()">Connect</button>
+
+  <pre id="log"></pre>
+
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+  <script>
+    let stompClient = null;
+
+    function log(message) {
+      document.getElementById("log").textContent += message + "\n";
+    }
+
+    function connect() {
+      const roomCode = document.getElementById("roomCode").value;
+
+      const socket = new SockJS("http://localhost:8080/ws");
+      stompClient = Stomp.over(socket);
+
+      stompClient.connect({}, function(frame) {
+        log("Connected: " + frame);
+
+        stompClient.subscribe("/topic/rooms/" + roomCode, function(message) {
+          log("Received:");
+          log(message.body);
+        });
+
+        log("Subscribed to /topic/rooms/" + roomCode);
+      }, function(error) {
+        log("Connection error: " + error);
+        console.error(error);
+      });
+    }
+  </script>
+</body>
+</html>

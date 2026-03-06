@@ -1,7 +1,5 @@
 package com.takonline.takonline.room.dto;
 
-import com.takonline.takonline.room.model.Room;
-
 public class CreateRoomResponse {
 
     private String roomCode;
@@ -28,21 +26,4 @@ public class CreateRoomResponse {
     public String getStatus() {
         return status;
     }
-
-    public CreateRoomResponse createRoom(String playerName) {
-    validatePlayerName(playerName);
-
-    String code = generateUniqueCode();
-    Room room = new Room(code, playerName);
-    roomRepository.save(room);
-
-    RoomResponse roomResponse = mapToResponse(room);
-    messagingTemplate.convertAndSend("/topic/rooms/" + code, roomResponse);
-
-    return new CreateRoomResponse(
-            room.getCode(),
-            room.getHostPlayerName(),
-            room.getStatus().name()
-    );
-}
 }

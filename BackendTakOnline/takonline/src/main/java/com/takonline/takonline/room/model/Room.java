@@ -9,8 +9,7 @@ public class Room {
 
     private String id;
     private String code;
-    private String hostPlayerName;
-    private List<String> players;
+    private List<RoomPlayer> players;
     private RoomStatus status;
     private LocalDateTime createdAt;
 
@@ -20,9 +19,8 @@ public class Room {
     public Room(String code, String hostPlayerName) {
         this.id = UUID.randomUUID().toString();
         this.code = code;
-        this.hostPlayerName = hostPlayerName;
         this.players = new ArrayList<>();
-        this.players.add(hostPlayerName);
+        this.players.add(new RoomPlayer(hostPlayerName, true, "WHITE"));
         this.status = RoomStatus.WAITING;
         this.createdAt = LocalDateTime.now();
     }
@@ -31,7 +29,9 @@ public class Room {
         if (players.size() >= 2) {
             throw new IllegalStateException("Room is already full");
         }
-        players.add(playerName);
+
+        players.add(new RoomPlayer(playerName, false, "BLACK"));
+
         if (players.size() == 2) {
             this.status = RoomStatus.FULL;
         }
@@ -39,10 +39,6 @@ public class Room {
 
     public boolean isFull() {
         return players.size() >= 2;
-    }
-
-    public boolean hasPlayer(String playerName) {
-        return players.contains(playerName);
     }
 
     public String getId() {
@@ -53,11 +49,7 @@ public class Room {
         return code;
     }
 
-    public String getHostPlayerName() {
-        return hostPlayerName;
-    }
-
-    public List<String> getPlayers() {
+    public List<RoomPlayer> getPlayers() {
         return players;
     }
 

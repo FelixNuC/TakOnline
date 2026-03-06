@@ -18,10 +18,10 @@ public class RoomController {
         this.roomService = roomService;
     }
 
-    @PostMapping
-    public CreateRoomResponse createRoom(@RequestBody CreateRoomRequest request) {
-        return roomService.createRoom(request.getPlayerName());
-    }
+  @PostMapping
+public RoomResponse createRoom(@RequestBody CreateRoomRequest request) {
+    return roomService.createRoom(request.getPlayerName());
+}
 
     @PostMapping("/{code}/join")
     public RoomResponse joinRoom(@PathVariable String code, @RequestBody JoinRoomRequest request) {

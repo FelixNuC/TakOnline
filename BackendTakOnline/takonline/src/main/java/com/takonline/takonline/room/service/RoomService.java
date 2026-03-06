@@ -1,11 +1,14 @@
 package com.takonline.takonline.room.service;
 
 import com.takonline.takonline.room.dto.CreateRoomResponse;
+import com.takonline.takonline.room.dto.RoomPlayerResponse;
 import com.takonline.takonline.room.dto.RoomResponse;
 import com.takonline.takonline.room.model.Room;
 import com.takonline.takonline.room.repository.RoomRepository;
-import org.springframework.stereotype.Service;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
 import java.util.Random;
 
 @Service
@@ -15,43 +18,41 @@ public class RoomService {
     private final SimpMessagingTemplate messagingTemplate;
     private final Random random = new Random();
 
-    public RoomService(RoomRepository roomRepository) {
+    public RoomService(RoomRepository roomRepository, SimpMessagingTemplate messagingTemplate) {
         this.roomRepository = roomRepository;
+        this.messagingTemplate = messagingTemplate;
     }
 
-    public CreateRoomResponse createRoom(String playerName) {
-        validatePlayerName(playerName);
+public RoomResponse createRoom(String playerName) {
+    validatePlayerName(playerName);
 
-        String code = generateUniqueCode();
-        Room room = new Room(code, playerName);
-        roomRepository.save(room);
+    String code = generateUniqueCode();
+    Room room = new Room(code, playerName);
+    roomRepository.save(room);
 
-        return new CreateRoomResponse(
-                room.getCode(),
-                room.getHostPlayerName(),
-                room.getStatus().name()
-        );
-    }
+    RoomResponse roomResponse = mapToResponse(room);
+    messagingTemplate.convertAndSend("/topic/rooms/" + code, roomResponse);
+
+    return roomResponse;
+}
 
     public RoomResponse joinRoom(String code, String playerName) {
-        return connectPlayer(code, playerName);
-    }
-
-    public RoomResponse connectPlayer(String code, String playerName) {
         validatePlayerName(playerName);
 
         Room room = roomRepository.findByCode(code)
                 .orElseThrow(() -> new IllegalArgumentException("Room not found"));
 
-        if (!room.hasPlayer(playerName)) {
-            if (room.isFull()) {
-                throw new IllegalStateException("Room is full");
-            }
-            room.addPlayer(playerName);
-            roomRepository.save(room);
+        if (room.isFull()) {
+            throw new IllegalStateException("Room is full");
         }
 
-        return mapToResponse(room);
+        room.addPlayer(playerName);
+        roomRepository.save(room);
+
+        RoomResponse response = mapToResponse(room);
+        messagingTemplate.convertAndSend("/topic/rooms/" + code, response);
+
+        return response;
     }
 
     public RoomResponse getRoom(String code) {
@@ -61,13 +62,22 @@ public class RoomService {
         return mapToResponse(room);
     }
 
-    private RoomResponse mapToResponse(Room room) {
-        return new RoomResponse(
-                room.getCode(),
-                room.getStatus().name(),
-                room.getPlayers()
-        );
-    }
+private RoomResponse mapToResponse(Room room) {
+    List<RoomPlayerResponse> players = room.getPlayers().stream()
+            .map(player -> new RoomPlayerResponse(
+                    player.getPlayerId(),
+                    player.getPlayerName(),
+                    player.isHost(),
+                    player.getColor()
+            ))
+            .toList();
+
+    return new RoomResponse(
+            room.getCode(),
+            room.getStatus().name(),
+            players
+    );
+}
 
     private void validatePlayerName(String playerName) {
         if (playerName == null || playerName.isBlank()) {

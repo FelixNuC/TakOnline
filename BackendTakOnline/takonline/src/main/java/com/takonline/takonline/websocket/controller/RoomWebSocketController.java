@@ -24,6 +24,6 @@ public class RoomWebSocketController {
             @DestinationVariable String code,
             @Payload RoomConnectionRequest request
     ) {
-        return roomService.connectPlayer(code, request.getPlayerName());
+        return roomService.joinRoom(code, request.getPlayerName());
     }
 }
