@@ -41,6 +41,10 @@ public class Room {
         return players.size() >= 2;
     }
 
+    public boolean hasPlayer(String playerName) {
+        return players.contains(playerName);
+    }
+
     public String getId() {
         return id;
     }
