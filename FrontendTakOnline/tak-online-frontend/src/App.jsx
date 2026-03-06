@@ -39,6 +39,7 @@ function App() {
   const [error, setError] = useState('')
   const [sparks, setSparks] = useState([])
   const [invertColors, setInvertColors] = useState(false)
+  const [copyMessage, setCopyMessage] = useState('')
 
   const activeName = room?.players?.at(-1)?.playerName ?? ''
   const activePlayer = useMemo(
@@ -193,6 +194,22 @@ function App() {
     setDragFrom({ row, col })
   }
 
+
+  const copyRoomCode = async () => {
+    if (!room?.code) return
+
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(room.code)
+      }
+      setCopyMessage('Código copiado')
+    } catch {
+      setCopyMessage(`Copia manualmente: ${room.code}`)
+    }
+
+    setTimeout(() => setCopyMessage(''), 1500)
+  }
+
   const canDropAt = (row, col) => possibleDrops.some((move) => move.row === row && move.col === col)
   const boardCells = game?.board?.cells ?? []
 
@@ -263,7 +280,15 @@ function App() {
       {room && (
         <section className="room-area">
           <div className="room-info panel">
-            <h2>Room {room.code}</h2>
+            <h2>Room creada</h2>
+            <div className="room-code-box">
+              <span className="room-code-label">Código de room</span>
+              <div className="room-code-row">
+                <strong className="room-code">{room.code}</strong>
+                <button type="button" onClick={copyRoomCode}>Copiar</button>
+              </div>
+              {copyMessage && <small>{copyMessage}</small>}
+            </div>
             <p>Tablero: {room.boardSize}x{room.boardSize}</p>
             <ul>
               {room.players.map((player) => (
