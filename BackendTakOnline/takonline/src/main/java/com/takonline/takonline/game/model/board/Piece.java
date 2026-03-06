@@ -20,4 +20,8 @@ public class Piece {
     public PieceType getType() {
         return type;
     }
+
+    public void setType(PieceType type) {
+        this.type = type;
+    }
 }

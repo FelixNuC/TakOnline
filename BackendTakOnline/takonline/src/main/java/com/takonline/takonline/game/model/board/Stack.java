@@ -22,11 +22,26 @@ public class Stack {
         pieces.add(piece);
     }
 
+    public void addPieces(List<Piece> newPieces) {
+        pieces.addAll(newPieces);
+    }
+
     public Piece getTopPiece() {
         if (pieces.isEmpty()) {
             return null;
         }
         return pieces.get(pieces.size() - 1);
+    }
+
+    public List<Piece> removeTopPieces(int count) {
+        if (count <= 0 || count > pieces.size()) {
+            throw new IllegalArgumentException("Invalid number of pieces to remove");
+        }
+
+        int fromIndex = pieces.size() - count;
+        List<Piece> removed = new ArrayList<>(pieces.subList(fromIndex, pieces.size()));
+        pieces.subList(fromIndex, pieces.size()).clear();
+        return removed;
     }
 
     public List<Piece> getPieces() {

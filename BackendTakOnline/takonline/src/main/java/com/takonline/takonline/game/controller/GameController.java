@@ -4,7 +4,10 @@ import com.takonline.takonline.game.dto.GameResponse;
 import com.takonline.takonline.game.dto.PlacePieceRequest;
 import com.takonline.takonline.game.service.GameService;
 import org.springframework.web.bind.annotation.*;
+import com.takonline.takonline.game.dto.MoveStackRequest;
 
+import com.takonline.takonline.game.dto.GameResponse;
+import com.takonline.takonline.game.dto.PlacePieceRequest;
 @RestController
 @RequestMapping("/api/games")
 @CrossOrigin(origins = "*")
@@ -34,6 +37,19 @@ public GameResponse placePiece(@PathVariable String gameId, @RequestBody PlacePi
             request.getRow(),
             request.getCol(),
             request.getPieceType()
+    );
+}
+
+@PostMapping("/{gameId}/moves/stack")
+public GameResponse moveStack(@PathVariable String gameId, @RequestBody MoveStackRequest request) {
+    return gameService.moveStack(
+            gameId,
+            request.getPlayerId(),
+            request.getFromRow(),
+            request.getFromCol(),
+            request.getDirection(),
+            request.getPickupCount(),
+            request.getDrops()
     );
 }
     
