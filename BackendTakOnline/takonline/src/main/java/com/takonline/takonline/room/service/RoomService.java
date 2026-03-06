@@ -23,11 +23,11 @@ public class RoomService {
         this.messagingTemplate = messagingTemplate;
     }
 
-public RoomResponse createRoom(String playerName) {
+public RoomResponse createRoom(String playerName, int boardSize) {
     validatePlayerName(playerName);
-
+    validateBoardSize(boardSize);
     String code = generateUniqueCode();
-    Room room = new Room(code, playerName);
+    Room room = new Room(code, playerName, boardSize);
     roomRepository.save(room);
 
     RoomResponse roomResponse = mapToResponse(room);
@@ -75,6 +75,7 @@ private RoomResponse mapToResponse(Room room) {
     return new RoomResponse(
             room.getCode(),
             room.getStatus().name(),
+            room.getBoardSize(),
             players
     );
 }
@@ -104,4 +105,12 @@ private RoomResponse mapToResponse(Room room) {
 
         return sb.toString();
     }
+
+
+private void validateBoardSize(int boardSize) {
+    if (boardSize != 3 && boardSize != 4 && boardSize != 5
+            && boardSize != 6 && boardSize != 7 && boardSize != 8) {
+        throw new IllegalArgumentException("Board size must be 3, 4, 5, 6, 7 or 8");
+    }
+}
 }

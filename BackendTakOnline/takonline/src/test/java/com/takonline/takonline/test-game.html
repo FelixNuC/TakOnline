@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tak Game WebSocket Test</title>
+</head>
+<body>
+  <h1>Tak Game WebSocket Test</h1>
+
+  <label>Game id:</label>
+  <input id="gameId" />
+  <button onclick="connect()">Connect</button>
+
+  <pre id="log"></pre>
+
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+  <script>
+    let stompClient = null;
+
+    function log(message) {
+      document.getElementById("log").textContent += message + "\n";
+    }
+
+    function connect() {
+      const gameId = document.getElementById("gameId").value;
+
+      const socket = new SockJS("http://localhost:8080/ws");
+      stompClient = Stomp.over(socket);
+
+      stompClient.connect({}, function(frame) {
+        log("Connected: " + frame);
+
+        stompClient.subscribe("/topic/games/" + gameId, function(message) {
+          log("Received:");
+          log(message.body);
+        });
+
+        log("Subscribed to /topic/games/" + gameId);
+      }, function(error) {
+        log("Connection error: " + error);
+        console.error(error);
+      });
+    }
+  </script>
+</body>
+</html>

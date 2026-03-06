@@ -26,8 +26,15 @@ public class GameController {
         return gameService.getGameByRoomCode(roomCode);
     }
 
-    @PostMapping("/{gameId}/moves/place")
-    public GameResponse placePiece(@PathVariable String gameId, @RequestBody PlacePieceRequest request) {
-        return gameService.placePiece(gameId, request.getPlayerId(), request.getRow(), request.getCol());
-    }
+@PostMapping("/{gameId}/moves/place")
+public GameResponse placePiece(@PathVariable String gameId, @RequestBody PlacePieceRequest request) {
+    return gameService.placePiece(
+            gameId,
+            request.getPlayerId(),
+            request.getRow(),
+            request.getCol(),
+            request.getPieceType()
+    );
+}
+    
 }

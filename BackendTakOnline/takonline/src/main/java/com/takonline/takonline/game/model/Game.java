@@ -16,7 +16,7 @@ private GameState state;
 private int boardSize;
 private Board board;
 private LocalDateTime createdAt;
-
+private String winnerColor;
     public Game() {
     }
 
@@ -29,6 +29,7 @@ private LocalDateTime createdAt;
         this.boardSize = boardSize;
         this.createdAt = LocalDateTime.now();
         this.board = new Board(boardSize);
+        this.winnerColor = null;
     }
 
     public String getGameId() {
@@ -63,5 +64,16 @@ private LocalDateTime createdAt;
     }
     public void setCurrentTurnColor(String currentTurnColor) {
     this.currentTurnColor = currentTurnColor;
+}
+public String getWinnerColor() {
+    return winnerColor;
+}
+
+public void setWinnerColor(String winnerColor) {
+    this.winnerColor = winnerColor;
+}
+
+public void setState(GameState state) {
+    this.state = state;
 }
 }

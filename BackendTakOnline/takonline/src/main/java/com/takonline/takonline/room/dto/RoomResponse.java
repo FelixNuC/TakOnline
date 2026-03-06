@@ -6,14 +6,16 @@ public class RoomResponse {
 
     private String roomCode;
     private String status;
+    private int boardSize;
     private List<RoomPlayerResponse> players;
 
     public RoomResponse() {
     }
 
-    public RoomResponse(String roomCode, String status, List<RoomPlayerResponse> players) {
+    public RoomResponse(String roomCode, String status, int boardSize, List<RoomPlayerResponse> players) {
         this.roomCode = roomCode;
         this.status = status;
+        this.boardSize = boardSize;
         this.players = players;
     }
 
@@ -23,6 +25,10 @@ public class RoomResponse {
 
     public String getStatus() {
         return status;
+    }
+
+    public int getBoardSize() {
+        return boardSize;
     }
 
     public List<RoomPlayerResponse> getPlayers() {

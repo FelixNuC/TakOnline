@@ -15,6 +15,7 @@ public class GameResponse {
     private GameState state;
     private int boardSize;
     private Board board;
+    private String winnerColor;
 
     public GameResponse() {
     }
@@ -25,7 +26,8 @@ public class GameResponse {
                         String currentTurnColor,
                         GameState state,
                         int boardSize,
-                        Board board) {
+                        Board board,
+                        String winnerColor) {
         this.gameId = gameId;
         this.roomCode = roomCode;
         this.players = players;
@@ -33,6 +35,7 @@ public class GameResponse {
         this.state = state;
         this.boardSize = boardSize;
         this.board = board;
+        this.winnerColor = winnerColor;
     }
 
     public String getGameId() {
@@ -61,5 +64,9 @@ public class GameResponse {
 
     public Board getBoard() {
         return board;
+    }
+
+    public String getWinnerColor() {
+        return winnerColor;
     }
 }

@@ -12,18 +12,19 @@ public class Room {
     private List<RoomPlayer> players;
     private RoomStatus status;
     private LocalDateTime createdAt;
-
+    private int boardSize;
     public Room() {
     }
 
-    public Room(String code, String hostPlayerName) {
-        this.id = UUID.randomUUID().toString();
-        this.code = code;
-        this.players = new ArrayList<>();
-        this.players.add(new RoomPlayer(hostPlayerName, true, "WHITE"));
-        this.status = RoomStatus.WAITING;
-        this.createdAt = LocalDateTime.now();
-    }
+public Room(String code, String hostPlayerName, int boardSize) {
+    this.id = UUID.randomUUID().toString();
+    this.code = code;
+    this.players = new ArrayList<>();
+    this.players.add(new RoomPlayer(hostPlayerName, true, "WHITE"));
+    this.status = RoomStatus.WAITING;
+    this.createdAt = LocalDateTime.now();
+    this.boardSize = boardSize;
+}
 
     public void addPlayer(String playerName) {
         if (players.size() >= 2) {
@@ -60,4 +61,7 @@ public class Room {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
+    public int getBoardSize() {
+    return boardSize;
+}
 }
