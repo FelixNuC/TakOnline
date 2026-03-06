@@ -1,17 +1,29 @@
 package com.takonline.takonline.websocket.controller;
 
-import com.takonline.takonline.websocket.dto.RoomMessage;
+import com.takonline.takonline.room.dto.RoomResponse;
+import com.takonline.takonline.room.service.RoomService;
+import com.takonline.takonline.websocket.dto.RoomConnectionRequest;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
 
 @Controller
 public class RoomWebSocketController {
 
-    @MessageMapping("/rooms/{code}/chat")
+    private final RoomService roomService;
+
+    public RoomWebSocketController(RoomService roomService) {
+        this.roomService = roomService;
+    }
+
+    @MessageMapping("/rooms/{code}/connect")
     @SendTo("/topic/rooms/{code}")
-    public RoomMessage sendRoomMessage(@DestinationVariable String code, RoomMessage message) {
-        return message;
+    public RoomResponse connectPlayer(
+            @DestinationVariable String code,
+            @Payload RoomConnectionRequest request
+    ) {
+        return roomService.connectPlayer(code, request.getPlayerName());
     }
 }
