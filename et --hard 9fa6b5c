@@ -1,0 +1,19 @@
+[33m6e2b00e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Merge pull request #5 from FelixNuC/codex/create-frontend-for-room-management-njredl
+[33mdaf4990[m[33m ([m[1;31morigin/codex/create-frontend-for-room-management-njredl[m[33m)[m Merge branch 'master' into codex/create-frontend-for-room-management-njredl
+[33md06c29d[m Fix roomCode mapping and add close button in room view
+[33md2ea82a[m Merge pull request #4 from FelixNuC/codex/create-frontend-for-room-management-tss5b3
+[33mb0db336[m[33m ([m[1;31morigin/codex/create-frontend-for-room-management-tss5b3[m[33m)[m Merge branch 'master' into codex/create-frontend-for-room-management-tss5b3
+[33mc464a74[m Show room code prominently with copy action
+[33mf2e740a[m Merge pull request #3 from FelixNuC/codex/create-frontend-for-room-management
+[33m7aa871b[m[33m ([m[1;31morigin/codex/create-frontend-for-room-management[m[33m)[m Create Tak frontend UI for rooms and gameplay board
+[33m9fa6b5c[m frontendfirstcommit
+[33mc4e7d18[m game win logic
+[33m29adb78[m mecanicas base
+[33maced745[m game
+[33md810711[m Merge pull request #2 from FelixNuC/codex/fix-import-issue-for-room-model-12qs21
+[33m79e0132[m[33m ([m[1;31morigin/codex/fix-import-issue-for-room-model-12qs21[m[33m)[m Merge branch 'master' into codex/fix-import-issue-for-room-model-12qs21
+[33m41ca68d[m Refocus websocket on room player connection flow
+[33m5d3c571[m Merge pull request #1 from FelixNuC/codex/fix-import-issue-for-room-model
+[33ma55a435[m[33m ([m[1;31morigin/codex/fix-import-issue-for-room-model[m[33m)[m Add Spring WebSocket setup with correct imports
+[33m7685c18[m websocket
+[33me9d08f6[m firstcommit
