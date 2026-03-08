@@ -18,11 +18,14 @@ function CreateRoomCard({ isActive, onOpen, onClose }) {
 
       const room = await createRoom(nickname, Number(boardSize));
       console.log("Room created:", room);
+      const player = room?.players?.find((p) => p.playerName === nickname) || null;
 
-     navigate(`/room/${room.roomCode}`, {
+      navigate(`/room/${room.roomCode}`, {
         state: {
           room,
           playerName: nickname,
+          playerId: player?.playerId || null,
+          player,
         },
       });
     } catch (err) {

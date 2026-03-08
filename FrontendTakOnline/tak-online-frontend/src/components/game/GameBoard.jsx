@@ -5,8 +5,16 @@ import PieceStack from "./PieceStack";
 function GameBoard({
   boardSize,
   cells,
-  selectedCellKey,
+  dragSourceKey,
+  dropTargetKey,
+  reachableDropKeys,
+  canDragCell,
+  canPlaceOnCell,
   onSelectCell,
+  onStartDrag,
+  onDragEnterCell,
+  onDropCell,
+  onEndDrag,
 }) {
   const width = 600;
   const height = 600;
@@ -75,7 +83,11 @@ function GameBoard({
         {positions.map((node) => {
           const key = getNodeKey(node.row, node.col);
           const cell = cellMap.get(key) || { row: node.row, col: node.col, stack: [] };
-          const selected = selectedCellKey === key;
+          const draggingFrom = dragSourceKey === key;
+          const isDropTarget = dropTargetKey === key;
+          const isReachable = !!reachableDropKeys?.has(key);
+          const draggable = !!canDragCell?.(cell);
+          const placementHover = !!canPlaceOnCell?.(cell);
 
           return (
             <div
@@ -85,12 +97,23 @@ function GameBoard({
                 left: `${(node.x / width) * 100}%`,
                 top: `${(node.y / height) * 100}%`,
               }}
+              onDragOver={(event) => {
+                if (!dragSourceKey) return;
+                event.preventDefault();
+              }}
+              onDragEnter={() => onDragEnterCell?.(cell)}
+              onDrop={(event) => {
+                if (!dragSourceKey) return;
+                event.preventDefault();
+                onDropCell?.(cell);
+              }}
             >
               <button
                 type="button"
-                className={`node-hitbox ${selected ? "selected" : ""}`}
+                className={`node-hitbox ${placementHover ? "placement-hover" : ""} ${isDropTarget ? "drop-target" : ""} ${isReachable ? "reachable-target" : ""}`}
                 onClick={() => onSelectCell(cell)}
               >
+                <span className="node-hitbox-glow" aria-hidden="true" />
                 <span className="sr-only">
                   Cell {node.row}, {node.col}
                 </span>
@@ -98,8 +121,21 @@ function GameBoard({
 
               <PieceStack
                 stack={cell.stack}
-                selected={selected}
+                selected={draggingFrom}
+                dragging={draggingFrom}
                 onClick={() => onSelectCell(cell)}
+                draggable={draggable}
+                onDragStart={(event) => {
+                  if (!onStartDrag) return;
+                  const allowed = onStartDrag(cell);
+                  if (allowed === false) {
+                    event.preventDefault();
+                    return;
+                  }
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData("text/plain", key);
+                }}
+                onDragEnd={() => onEndDrag?.()}
               />
             </div>
           );

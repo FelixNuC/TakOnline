@@ -124,6 +124,18 @@
   font-weight: 600;
   cursor: pointer;
 }
+  .menu-form select {
+  padding: 12px 14px;
+  border: 1px solid #cfcfcf;
+  border-radius: 12px;
+  font-size: 1rem;
+  outline: none;
+  background: white;
+}
+
+.menu-form select:focus {
+  border-color: #888;
+}
 
 .submit-button:hover {
   opacity: 0.92;

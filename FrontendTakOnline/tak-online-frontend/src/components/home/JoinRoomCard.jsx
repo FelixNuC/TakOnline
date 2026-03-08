@@ -18,11 +18,14 @@ function JoinRoomCard({ isActive, onOpen, onClose }) {
 
       const room = await joinRoom(roomCode, nickname);
       console.log("Joined room:", room);
+      const player = room?.players?.find((p) => p.playerName === nickname) || null;
 
       navigate(`/room/${room.roomCode}`, {
         state: {
           room,
           playerName: nickname,
+          playerId: player?.playerId || null,
+          player,
         },
       });
     } catch (err) {

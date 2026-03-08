@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { getRoom } from "../services/roomService";
 import { createGameFromRoom, getGameByRoomCode } from "../services/gameService";
@@ -9,9 +9,27 @@ function RoomPage() {
   const { roomCode } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const playerStorageKey = `tak.player.${roomCode}`;
+  const statePlayer = location.state?.player;
+  const statePlayerId = statePlayer?.playerId || location.state?.playerId || null;
+  const statePlayerName = statePlayer?.playerName || location.state?.playerName || null;
 
   const [room, setRoom] = useState(location.state?.room || null);
   const [game, setGame] = useState(null);
+  const [playerContext, setPlayerContext] = useState(() => {
+    if (statePlayer?.playerId) return statePlayer;
+
+    if (statePlayerId || statePlayerName) {
+      return { playerId: statePlayerId || null, playerName: statePlayerName || null };
+    }
+
+    try {
+      const saved = sessionStorage.getItem(`tak.player.${roomCode}`);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(!location.state?.room);
   const [startingGame, setStartingGame] = useState(false);
   const [error, setError] = useState("");
@@ -36,22 +54,112 @@ function RoomPage() {
     loadRoom();
   }, [roomCode, room]);
 
+  const refreshRoom = useCallback(async () => {
+    const roomData = await getRoom(roomCode);
+    setRoom(roomData);
+    return roomData;
+  }, [roomCode]);
+
+  const refreshGame = useCallback(async () => {
+    const gameData = await getGameByRoomCode(roomCode);
+    setGame(gameData);
+    return gameData;
+  }, [roomCode]);
+
   useEffect(() => {
     async function loadExistingGame() {
       try {
-        const gameData = await getGameByRoomCode(roomCode);
-        setGame(gameData);
-      } catch (err) {
+        await refreshGame();
+      } catch {
         // Si todavía no existe partida, no hacemos nada
         console.log("No existing game yet for this room");
       }
     }
 
     loadExistingGame();
+  }, [refreshGame]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function syncRoomState() {
+      try {
+        const roomData = await getRoom(roomCode);
+        if (!isCancelled) {
+          setRoom(roomData);
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          console.error("Could not refresh room in real time", err);
+        }
+      }
+
+      try {
+        const gameData = await getGameByRoomCode(roomCode);
+        if (!isCancelled) {
+          setGame(gameData);
+        }
+      } catch {
+        // Puede no existir aún, ignoramos
+      }
+    }
+
+    const intervalId = setInterval(syncRoomState, 1000);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(intervalId);
+    };
   }, [roomCode]);
 
   const players = room?.players || [];
   const isReady = players.length >= 2;
+
+  useEffect(() => {
+    if (!players.length) return;
+
+    let resolvedPlayer = null;
+
+    if (playerContext?.playerId) {
+      resolvedPlayer = players.find((p) => p.playerId === playerContext.playerId) || null;
+    }
+
+    if (!resolvedPlayer && playerContext?.playerName) {
+      resolvedPlayer = players.find((p) => p.playerName === playerContext.playerName) || null;
+    }
+
+    if (!resolvedPlayer && statePlayerId) {
+      resolvedPlayer = players.find((p) => p.playerId === statePlayerId) || null;
+    }
+
+    if (!resolvedPlayer && statePlayerName) {
+      resolvedPlayer = players.find((p) => p.playerName === statePlayerName) || null;
+    }
+
+    if (!resolvedPlayer) return;
+
+    const nextContext = {
+      playerId: resolvedPlayer.playerId,
+      playerName: resolvedPlayer.playerName,
+    };
+
+    if (
+      playerContext?.playerId === nextContext.playerId &&
+      playerContext?.playerName === nextContext.playerName
+    ) {
+      return;
+    }
+
+    setPlayerContext(nextContext);
+    sessionStorage.setItem(playerStorageKey, JSON.stringify(nextContext));
+  }, [
+    players,
+    playerContext?.playerId,
+    playerContext?.playerName,
+    statePlayerId,
+    statePlayerName,
+    playerStorageKey,
+  ]);
 
   const statusLabel = useMemo(() => {
     if (!room?.status) return "Unknown";
@@ -82,6 +190,7 @@ function RoomPage() {
 
       const gameData = await createGameFromRoom(roomCode);
       setGame(gameData);
+      await refreshRoom();
     } catch (err) {
       console.error(err);
       setError("Could not start game");
@@ -139,7 +248,11 @@ function RoomPage() {
         </button>
 
         <div className="room-shell">
-          <GameView game={game} />
+          <GameView
+            game={game}
+            currentPlayer={playerContext}
+            onGameUpdate={setGame}
+          />
         </div>
       </div>
     );

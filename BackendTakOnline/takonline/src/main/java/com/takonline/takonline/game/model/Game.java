@@ -1,7 +1,9 @@
 package com.takonline.takonline.game.model;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import com.takonline.takonline.game.model.board.Board;
@@ -17,6 +19,7 @@ private int boardSize;
 private Board board;
 private LocalDateTime createdAt;
 private String winnerColor;
+private Set<String> rematchPlayerIds;
     public Game() {
     }
 
@@ -30,6 +33,7 @@ private String winnerColor;
         this.createdAt = LocalDateTime.now();
         this.board = new Board(boardSize);
         this.winnerColor = null;
+        this.rematchPlayerIds = new HashSet<>();
     }
 
     public String getGameId() {
@@ -75,5 +79,27 @@ public void setWinnerColor(String winnerColor) {
 
 public void setState(GameState state) {
     this.state = state;
+}
+
+public int getRematchVotes() {
+    return rematchPlayerIds.size();
+}
+
+public Set<String> getRematchPlayerIds() {
+    return rematchPlayerIds;
+}
+
+public boolean addRematchVote(String playerId) {
+    return rematchPlayerIds.add(playerId);
+}
+
+public void resetForRematch(List<GamePlayer> players) {
+    this.players = players;
+    this.currentTurnColor = "WHITE";
+    this.state = GameState.IN_PROGRESS;
+    this.board = new Board(boardSize);
+    this.createdAt = LocalDateTime.now();
+    this.winnerColor = null;
+    this.rematchPlayerIds = new HashSet<>();
 }
 }

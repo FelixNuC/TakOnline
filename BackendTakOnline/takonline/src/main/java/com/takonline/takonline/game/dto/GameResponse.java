@@ -16,6 +16,8 @@ public class GameResponse {
     private int boardSize;
     private Board board;
     private String winnerColor;
+    private int rematchVotes;
+    private List<String> rematchPlayerIds;
 
     public GameResponse() {
     }
@@ -27,7 +29,9 @@ public class GameResponse {
                         GameState state,
                         int boardSize,
                         Board board,
-                        String winnerColor) {
+                        String winnerColor,
+                        int rematchVotes,
+                        List<String> rematchPlayerIds) {
         this.gameId = gameId;
         this.roomCode = roomCode;
         this.players = players;
@@ -36,6 +40,8 @@ public class GameResponse {
         this.boardSize = boardSize;
         this.board = board;
         this.winnerColor = winnerColor;
+        this.rematchVotes = rematchVotes;
+        this.rematchPlayerIds = rematchPlayerIds;
     }
 
     public String getGameId() {
@@ -68,5 +74,13 @@ public class GameResponse {
 
     public String getWinnerColor() {
         return winnerColor;
+    }
+
+    public int getRematchVotes() {
+        return rematchVotes;
+    }
+
+    public List<String> getRematchPlayerIds() {
+        return rematchPlayerIds;
     }
 }

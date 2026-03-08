@@ -58,7 +58,10 @@ List<GamePlayer> players = room.getPlayers().stream()
         Game game = new Game(roomCode, players, room.getBoardSize());
         gameRepository.save(game);
 
-        return mapToResponse(game);
+        GameResponse response = mapToResponse(game);
+        publishGameUpdate(response);
+
+        return response;
     }
 
     public GameResponse getGameByRoomCode(String roomCode) {
@@ -91,8 +94,52 @@ private GameResponse mapToResponse(Game game) {
             game.getState(),
             game.getBoardSize(),
             game.getBoard(),
-            game.getWinnerColor()
+            game.getWinnerColor(),
+            game.getRematchVotes(),
+            new ArrayList<>(game.getRematchPlayerIds())
     );
+}
+
+public GameResponse requestRematch(String gameId, String playerId) {
+    Game game = gameRepository.findById(gameId)
+            .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+    if (game.getState() != GameState.FINISHED) {
+        throw new IllegalStateException("Rematch is only available when game is finished");
+    }
+
+    boolean playerExists = game.getPlayers().stream()
+            .anyMatch(player -> player.getPlayerId().equals(playerId));
+
+    if (!playerExists) {
+        throw new IllegalArgumentException("Player not found in game");
+    }
+
+    game.addRematchVote(playerId);
+
+    if (game.getRematchVotes() >= game.getPlayers().size()) {
+        int flats = TakPieceRules.flatsForBoard(game.getBoardSize());
+        int capstones = TakPieceRules.capstonesForBoard(game.getBoardSize());
+
+        List<GamePlayer> rematchPlayers = game.getPlayers().stream()
+                .map(player -> new GamePlayer(
+                        player.getPlayerId(),
+                        player.getPlayerName(),
+                        player.getColor(),
+                        flats,
+                        capstones
+                ))
+                .toList();
+
+        game.resetForRematch(rematchPlayers);
+    }
+
+    gameRepository.save(game);
+
+    GameResponse response = mapToResponse(game);
+    publishGameUpdate(response);
+
+    return response;
 }
 public GameResponse placePiece(String gameId, String playerId, int row, int col, String pieceType) {
     Game game = gameRepository.findById(gameId)
@@ -134,8 +181,8 @@ game.getBoard().placePiece(row, col, piece);
 if (hasRoadWin(game, player.getColor())) {
     game.setState(GameState.FINISHED);
     game.setWinnerColor(player.getColor());
-} else if (isBoardFull(game) || hasAnyPlayerRunOutOfPlaceablePieces(game)) {
-    resolveFlatWin(game);
+} else if (hasAnyPlayerRunOutOfPlaceablePieces(game)) {
+    resolveOutOfPiecesWin(game);
 } else {
     String nextTurn = game.getCurrentTurnColor().equals("WHITE") ? "BLACK" : "WHITE";
     game.setCurrentTurnColor(nextTurn);
@@ -143,7 +190,7 @@ if (hasRoadWin(game, player.getColor())) {
 gameRepository.save(game);
 
 GameResponse response = mapToResponse(game);
-messagingTemplate.convertAndSend("/topic/games/" + gameId, response);
+publishGameUpdate(response);
 
 return response;
 }
@@ -152,17 +199,17 @@ private boolean hasRoadWin(Game game, String color) {
     Set<String> visited = new HashSet<>();
 
     if ("WHITE".equals(color)) {
-        for (int col = 0; col < size; col++) {
-            if (isRoadPieceForColor(game, 0, col, color)) {
-                if (dfs(game, 0, col, color, visited)) {
+        for (int row = 0; row < size; row++) {
+            if (isRoadPieceForColor(game, row, 0, color)) {
+                if (dfs(game, row, 0, color, visited)) {
                     return true;
                 }
             }
         }
     } else if ("BLACK".equals(color)) {
-        for (int row = 0; row < size; row++) {
-            if (isRoadPieceForColor(game, row, 0, color)) {
-                if (dfs(game, row, 0, color, visited)) {
+        for (int col = 0; col < size; col++) {
+            if (isRoadPieceForColor(game, 0, col, color)) {
+                if (dfs(game, 0, col, color, visited)) {
                     return true;
                 }
             }
@@ -171,37 +218,15 @@ private boolean hasRoadWin(Game game, String color) {
 
     return false;
 }
-private int countVisibleFlats(Game game, String color) {
-    int count = 0;
-
-    for (int row = 0; row < game.getBoard().getSize(); row++) {
-        for (int col = 0; col < game.getBoard().getSize(); col++) {
-            Stack stack = game.getBoard().getStack(row, col);
-
-            if (stack.isEmpty() || stack.getTopPiece() == null) {
-                continue;
-            }
-
-            Piece top = stack.getTopPiece();
-
-            if (top.getColor().name().equals(color) && top.getType() == PieceType.FLAT) {
-                count++;
-            }
-        }
-    }
-
-    return count;
-}
-private void resolveFlatWin(Game game) {
-    int whiteFlats = countVisibleFlats(game, "WHITE");
-    int blackFlats = countVisibleFlats(game, "BLACK");
+private void resolveOutOfPiecesWin(Game game) {
+    List<GamePlayer> exhaustedPlayers = game.getPlayers().stream()
+            .filter(player -> player.getRemainingFlats() == 0 && player.getRemainingCapstones() == 0)
+            .toList();
 
     game.setState(GameState.FINISHED);
 
-    if (whiteFlats > blackFlats) {
-        game.setWinnerColor("WHITE");
-    } else if (blackFlats > whiteFlats) {
-        game.setWinnerColor("BLACK");
+    if (exhaustedPlayers.size() == 1) {
+        game.setWinnerColor(exhaustedPlayers.get(0).getColor());
     } else {
         game.setWinnerColor("DRAW");
     }
@@ -224,11 +249,11 @@ private boolean dfs(Game game, int row, int col, String color, Set<String> visit
 
     visited.add(key);
 
-    if ("WHITE".equals(color) && row == size - 1) {
+    if ("WHITE".equals(color) && col == size - 1) {
         return true;
     }
 
-    if ("BLACK".equals(color) && col == size - 1) {
+    if ("BLACK".equals(color) && row == size - 1) {
         return true;
     }
 
@@ -328,6 +353,9 @@ public GameResponse moveStack(String gameId,
 
     validatePathInsideBoard(game, fromRow, fromCol, parsedDirection, drops.size());
 
+    // Validate full move before mutating board state to avoid partial/losing moves on errors.
+    validateMoveTargetsBeforeApply(game, fromRow, fromCol, parsedDirection, pickupCount, drops, originStack);
+
     List<Piece> carriedPieces = originStack.removeTopPieces(pickupCount);
 
     int currentRow = fromRow;
@@ -360,8 +388,8 @@ for (int i = 0; i < drops.size(); i++) {
     if (hasRoadWin(game, player.getColor())) {
         game.setState(GameState.FINISHED);
         game.setWinnerColor(player.getColor());
-    }  else if (isBoardFull(game) || hasAnyPlayerRunOutOfPlaceablePieces(game)) {
-    resolveFlatWin(game);
+    }  else if (hasAnyPlayerRunOutOfPlaceablePieces(game)) {
+    resolveOutOfPiecesWin(game);
 } else {
         String nextTurn = game.getCurrentTurnColor().equals("WHITE") ? "BLACK" : "WHITE";
         game.setCurrentTurnColor(nextTurn);
@@ -370,9 +398,53 @@ for (int i = 0; i < drops.size(); i++) {
     gameRepository.save(game);
 
     GameResponse response = mapToResponse(game);
-    messagingTemplate.convertAndSend("/topic/games/" + gameId, response);
+    publishGameUpdate(response);
 
     return response;
+}
+
+private void validateMoveTargetsBeforeApply(Game game,
+                                            int fromRow,
+                                            int fromCol,
+                                            Direction direction,
+                                            int pickupCount,
+                                            List<Integer> drops,
+                                            Stack originStack) {
+    List<Piece> originPieces = originStack.getPieces();
+    int previewStart = originPieces.size() - pickupCount;
+    List<Piece> carriedPreview = new ArrayList<>(originPieces.subList(previewStart, originPieces.size()));
+
+    int currentRow = fromRow;
+    int currentCol = fromCol;
+    int currentIndex = 0;
+
+    for (int i = 0; i < drops.size(); i++) {
+        Integer dropCount = drops.get(i);
+
+        if (dropCount == null || dropCount <= 0) {
+            throw new IllegalArgumentException("Each drop must be greater than 0");
+        }
+
+        if (currentIndex + dropCount > carriedPreview.size()) {
+            throw new IllegalArgumentException("Invalid drop distribution for pickupCount");
+        }
+
+        currentRow = nextRow(currentRow, direction);
+        currentCol = nextCol(currentCol, direction);
+
+        Stack targetStack = game.getBoard().getStack(currentRow, currentCol);
+        List<Piece> toDrop = takeNextDropGroup(carriedPreview, currentIndex, dropCount);
+        boolean isLastDrop = (i == drops.size() - 1);
+
+        validateTargetStackForMove(targetStack, toDrop, isLastDrop);
+
+        currentIndex += dropCount;
+    }
+}
+
+private void publishGameUpdate(GameResponse response) {
+    messagingTemplate.convertAndSend("/topic/games/" + response.getGameId(), response);
+    messagingTemplate.convertAndSend("/topic/rooms/" + response.getRoomCode() + "/game", response);
 }
 private void flattenStandingIfNeeded(Stack targetStack, List<Piece> toDrop, boolean isLastDrop) {
     if (targetStack.isEmpty()) {
@@ -413,7 +485,13 @@ private void validateTargetStackForMove(Stack targetStack, List<Piece> toDrop, b
         return;
     }
 
-    if (targetStack.getTopPiece().getType() != PieceType.STANDING) {
+    PieceType targetTopType = targetStack.getTopPiece().getType();
+
+    if (targetTopType == PieceType.CAPSTONE) {
+        throw new IllegalStateException("Cannot move onto a capstone");
+    }
+
+    if (targetTopType != PieceType.STANDING) {
         return;
     }
 
@@ -460,16 +538,6 @@ private int nextCol(int currentCol, Direction direction) {
     };
 }
 
-private boolean isBoardFull(Game game) {
-    for (int row = 0; row < game.getBoard().getSize(); row++) {
-        for (int col = 0; col < game.getBoard().getSize(); col++) {
-            if (game.getBoard().getStack(row, col).isEmpty()) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
 private boolean hasAnyPlayerRunOutOfPlaceablePieces(Game game) {
     return game.getPlayers().stream()
             .anyMatch(player ->

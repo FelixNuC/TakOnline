@@ -57,3 +57,20 @@ export async function moveStack(gameId, payload) {
 
   return await response.json();
 }
+
+export async function requestRematch(gameId, payload) {
+  const response = await fetch(`${API_BASE_URL}/api/games/${gameId}/rematch`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Error requesting rematch");
+  }
+
+  return await response.json();
+}
