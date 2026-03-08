@@ -23,11 +23,17 @@ public class RoomService {
         this.messagingTemplate = messagingTemplate;
     }
 
-public RoomResponse createRoom(String playerName, int boardSize) {
+public RoomResponse createRoom(String playerName, int boardSize, String gameMode, String aiDifficulty) {
     validatePlayerName(playerName);
     validateBoardSize(boardSize);
+    boolean vsAi = "AI".equalsIgnoreCase(gameMode);
+    String normalizedDifficulty = null;
+    if (vsAi) {
+        normalizedDifficulty = normalizeAiDifficulty(aiDifficulty);
+    }
+
     String code = generateUniqueCode();
-    Room room = new Room(code, playerName, boardSize);
+    Room room = new Room(code, playerName, boardSize, vsAi, normalizedDifficulty);
     roomRepository.save(room);
 
     RoomResponse roomResponse = mapToResponse(room);
@@ -68,7 +74,8 @@ private RoomResponse mapToResponse(Room room) {
                     player.getPlayerId(),
                     player.getPlayerName(),
                     player.isHost(),
-                    player.getColor()
+                    player.getColor(),
+                    player.isBot()
             ))
             .toList();
 
@@ -76,7 +83,9 @@ private RoomResponse mapToResponse(Room room) {
             room.getCode(),
             room.getStatus().name(),
             room.getBoardSize(),
-            players
+            players,
+            room.isVsAi(),
+            room.getAiDifficulty()
     );
 }
 
@@ -112,5 +121,18 @@ private void validateBoardSize(int boardSize) {
             && boardSize != 6 && boardSize != 7 && boardSize != 8) {
         throw new IllegalArgumentException("Board size must be 3, 4, 5, 6, 7 or 8");
     }
+}
+
+private String normalizeAiDifficulty(String aiDifficulty) {
+    if (aiDifficulty == null || aiDifficulty.isBlank()) {
+        return "NORMAL";
+    }
+
+    String normalized = aiDifficulty.trim().toUpperCase();
+    if (!"EASY".equals(normalized) && !"NORMAL".equals(normalized) && !"HARD".equals(normalized)) {
+        throw new IllegalArgumentException("AI difficulty must be EASY, NORMAL or HARD");
+    }
+
+    return normalized;
 }
 }

@@ -1,6 +1,6 @@
 const API_BASE_URL = "http://localhost:8080";
 
-export async function createRoom(playerName, boardSize = 5) {
+export async function createRoom(playerName, boardSize = 5, gameMode = "PVP", aiDifficulty = "NORMAL") {
   const response = await fetch(`${API_BASE_URL}/api/rooms`, {
     method: "POST",
     headers: {
@@ -9,6 +9,8 @@ export async function createRoom(playerName, boardSize = 5) {
     body: JSON.stringify({
       playerName,
       boardSize,
+      gameMode,
+      aiDifficulty,
     }),
   });
 

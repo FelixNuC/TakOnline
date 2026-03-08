@@ -4,6 +4,8 @@ public class CreateRoomRequest {
 
     private String playerName;
     private int boardSize;
+    private String gameMode;
+    private String aiDifficulty;
 
     public CreateRoomRequest() {
     }
@@ -22,5 +24,21 @@ public class CreateRoomRequest {
 
     public void setBoardSize(int boardSize) {
         this.boardSize = boardSize;
+    }
+
+    public String getGameMode() {
+        return gameMode;
+    }
+
+    public void setGameMode(String gameMode) {
+        this.gameMode = gameMode;
+    }
+
+    public String getAiDifficulty() {
+        return aiDifficulty;
+    }
+
+    public void setAiDifficulty(String aiDifficulty) {
+        this.aiDifficulty = aiDifficulty;
     }
 }

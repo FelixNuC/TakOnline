@@ -13,15 +13,28 @@ public class Room {
     private RoomStatus status;
     private LocalDateTime createdAt;
     private int boardSize;
+    private boolean vsAi;
+    private String aiDifficulty;
     public Room() {
     }
 
 public Room(String code, String hostPlayerName, int boardSize) {
+    this(code, hostPlayerName, boardSize, false, null);
+}
+
+public Room(String code, String hostPlayerName, int boardSize, boolean vsAi, String aiDifficulty) {
     this.id = UUID.randomUUID().toString();
     this.code = code;
     this.players = new ArrayList<>();
     this.players.add(new RoomPlayer(hostPlayerName, true, "WHITE"));
-    this.status = RoomStatus.WAITING;
+    this.vsAi = vsAi;
+    this.aiDifficulty = aiDifficulty;
+    if (vsAi) {
+        this.players.add(new RoomPlayer("TakBot (" + aiDifficulty + ")", false, "BLACK", true));
+        this.status = RoomStatus.FULL;
+    } else {
+        this.status = RoomStatus.WAITING;
+    }
     this.createdAt = LocalDateTime.now();
     this.boardSize = boardSize;
 }
@@ -29,6 +42,11 @@ public Room(String code, String hostPlayerName, int boardSize) {
     public void addPlayer(String playerName) {
         if (players.size() >= 2) {
             throw new IllegalStateException("Room is already full");
+        }
+        boolean duplicateName = players.stream()
+                .anyMatch(player -> player.getPlayerName().equalsIgnoreCase(playerName));
+        if (duplicateName) {
+            throw new IllegalStateException("Player name already exists in this room");
         }
 
         players.add(new RoomPlayer(playerName, false, "BLACK"));
@@ -64,4 +82,12 @@ public Room(String code, String hostPlayerName, int boardSize) {
     public int getBoardSize() {
     return boardSize;
 }
+
+    public boolean isVsAi() {
+        return vsAi;
+    }
+
+    public String getAiDifficulty() {
+        return aiDifficulty;
+    }
 }

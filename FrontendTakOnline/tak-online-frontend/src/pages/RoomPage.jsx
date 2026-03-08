@@ -125,7 +125,10 @@ function RoomPage() {
     }
 
     if (!resolvedPlayer && playerContext?.playerName) {
-      resolvedPlayer = players.find((p) => p.playerName === playerContext.playerName) || null;
+      const byName = players.filter((p) => p.playerName === playerContext.playerName);
+      if (byName.length === 1) {
+        resolvedPlayer = byName[0];
+      }
     }
 
     if (!resolvedPlayer && statePlayerId) {
@@ -133,7 +136,10 @@ function RoomPage() {
     }
 
     if (!resolvedPlayer && statePlayerName) {
-      resolvedPlayer = players.find((p) => p.playerName === statePlayerName) || null;
+      const byName = players.filter((p) => p.playerName === statePlayerName);
+      if (byName.length === 1) {
+        resolvedPlayer = byName[0];
+      }
     }
 
     if (!resolvedPlayer) return;

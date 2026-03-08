@@ -5,6 +5,8 @@ import { createRoom } from "../../services/roomService";
 function CreateRoomCard({ isActive, onOpen, onClose }) {
   const [nickname, setNickname] = useState("");
   const [boardSize, setBoardSize] = useState(5);
+  const [gameMode, setGameMode] = useState("PVP");
+  const [aiDifficulty, setAiDifficulty] = useState("NORMAL");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -16,7 +18,12 @@ function CreateRoomCard({ isActive, onOpen, onClose }) {
     try {
       setLoading(true);
 
-      const room = await createRoom(nickname, Number(boardSize));
+      const room = await createRoom(
+        nickname,
+        Number(boardSize),
+        gameMode,
+        aiDifficulty
+      );
       console.log("Room created:", room);
       const player = room?.players?.find((p) => p.playerName === nickname) || null;
 
@@ -73,6 +80,31 @@ function CreateRoomCard({ isActive, onOpen, onClose }) {
               <option value={5}>5 x 5</option>
               <option value={6}>6 x 6</option>
             </select>
+
+            <label htmlFor="game-mode">Game mode</label>
+            <select
+              id="game-mode"
+              value={gameMode}
+              onChange={(e) => setGameMode(e.target.value)}
+            >
+              <option value="PVP">Player vs Player</option>
+              <option value="AI">Player vs AI</option>
+            </select>
+
+            {gameMode === "AI" && (
+              <>
+                <label htmlFor="ai-difficulty">AI difficulty</label>
+                <select
+                  id="ai-difficulty"
+                  value={aiDifficulty}
+                  onChange={(e) => setAiDifficulty(e.target.value)}
+                >
+                  <option value="EASY">Easy</option>
+                  <option value="NORMAL">Normal</option>
+                  <option value="HARD">Hard</option>
+                </select>
+              </>
+            )}
 
             {error && <p className="form-error">{error}</p>}
 

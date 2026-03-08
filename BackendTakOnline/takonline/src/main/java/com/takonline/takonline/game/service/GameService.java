@@ -18,8 +18,10 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import com.takonline.takonline.game.model.Direction;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 
 @Service
@@ -28,6 +30,7 @@ public class GameService {
 private final GameRepository gameRepository;
 private final RoomRepository roomRepository;
 private final SimpMessagingTemplate messagingTemplate;
+private final Random random = new Random();
 
 public GameService(GameRepository gameRepository,
                    RoomRepository roomRepository,
@@ -55,7 +58,7 @@ List<GamePlayer> players = room.getPlayers().stream()
         .map(p -> mapRoomPlayerToGamePlayer(p, boardSize))
         .toList();
 
-        Game game = new Game(roomCode, players, room.getBoardSize());
+        Game game = new Game(roomCode, players, room.getBoardSize(), room.isVsAi(), room.getAiDifficulty());
         gameRepository.save(game);
 
         GameResponse response = mapToResponse(game);
@@ -81,7 +84,8 @@ private GamePlayer mapRoomPlayerToGamePlayer(RoomPlayer roomPlayer, int boardSiz
             roomPlayer.getPlayerName(),
             roomPlayer.getColor(),
             flats,
-            capstones
+            capstones,
+            roomPlayer.isBot()
     );
 }
 
@@ -108,16 +112,27 @@ public GameResponse requestRematch(String gameId, String playerId) {
         throw new IllegalStateException("Rematch is only available when game is finished");
     }
 
-    boolean playerExists = game.getPlayers().stream()
-            .anyMatch(player -> player.getPlayerId().equals(playerId));
+    GamePlayer requester = game.getPlayers().stream()
+            .filter(player -> player.getPlayerId().equals(playerId))
+            .findFirst()
+            .orElse(null);
 
-    if (!playerExists) {
+    if (requester == null) {
         throw new IllegalArgumentException("Player not found in game");
+    }
+
+    if (requester.isBot()) {
+        throw new IllegalArgumentException("Bot player cannot request rematch");
     }
 
     game.addRematchVote(playerId);
 
-    if (game.getRematchVotes() >= game.getPlayers().size()) {
+    long requiredVotes = game.getPlayers().stream().filter(player -> !player.isBot()).count();
+    if (requiredVotes <= 0) {
+        requiredVotes = game.getPlayers().size();
+    }
+
+    if (game.getRematchVotes() >= requiredVotes) {
         int flats = TakPieceRules.flatsForBoard(game.getBoardSize());
         int capstones = TakPieceRules.capstonesForBoard(game.getBoardSize());
 
@@ -127,7 +142,8 @@ public GameResponse requestRematch(String gameId, String playerId) {
                         player.getPlayerName(),
                         player.getColor(),
                         flats,
-                        capstones
+                        capstones,
+                        player.isBot()
                 ))
                 .toList();
 
@@ -164,6 +180,10 @@ public GameResponse placePiece(String gameId, String playerId, int row, int col,
         throw new IllegalArgumentException("Invalid piece type");
     }
 
+    if (!game.getBoard().getStack(row, col).isEmpty()) {
+        throw new IllegalStateException("Cell is not empty");
+    }
+
     PieceColor pieceColor = PieceColor.valueOf(player.getColor());
 switch (parsedPieceType) {
 
@@ -187,20 +207,15 @@ if (hasRoadWin(game, player.getColor())) {
     String nextTurn = game.getCurrentTurnColor().equals("WHITE") ? "BLACK" : "WHITE";
     game.setCurrentTurnColor(nextTurn);
 }
-gameRepository.save(game);
-
-GameResponse response = mapToResponse(game);
-publishGameUpdate(response);
-
-return response;
+return savePublishAndMaybeRunAi(game);
 }
 private boolean hasRoadWin(Game game, String color) {
     int size = game.getBoard().getSize();
-    Set<String> visited = new HashSet<>();
 
     if ("WHITE".equals(color)) {
         for (int row = 0; row < size; row++) {
             if (isRoadPieceForColor(game, row, 0, color)) {
+                Set<String> visited = new HashSet<>();
                 if (dfs(game, row, 0, color, visited)) {
                     return true;
                 }
@@ -209,6 +224,7 @@ private boolean hasRoadWin(Game game, String color) {
     } else if ("BLACK".equals(color)) {
         for (int col = 0; col < size; col++) {
             if (isRoadPieceForColor(game, 0, col, color)) {
+                Set<String> visited = new HashSet<>();
                 if (dfs(game, 0, col, color, visited)) {
                     return true;
                 }
@@ -395,12 +411,7 @@ for (int i = 0; i < drops.size(); i++) {
         game.setCurrentTurnColor(nextTurn);
     }
 
-    gameRepository.save(game);
-
-    GameResponse response = mapToResponse(game);
-    publishGameUpdate(response);
-
-    return response;
+    return savePublishAndMaybeRunAi(game);
 }
 
 private void validateMoveTargetsBeforeApply(Game game,
@@ -445,6 +456,242 @@ private void validateMoveTargetsBeforeApply(Game game,
 private void publishGameUpdate(GameResponse response) {
     messagingTemplate.convertAndSend("/topic/games/" + response.getGameId(), response);
     messagingTemplate.convertAndSend("/topic/rooms/" + response.getRoomCode() + "/game", response);
+}
+
+private GameResponse savePublishAndMaybeRunAi(Game game) {
+    gameRepository.save(game);
+
+    GameResponse response = mapToResponse(game);
+    publishGameUpdate(response);
+
+    if (game.getState() != GameState.IN_PROGRESS) {
+        return response;
+    }
+
+    GamePlayer aiPlayer = game.getPlayers().stream()
+            .filter(player -> player.isBot() && player.getColor().equals(game.getCurrentTurnColor()))
+            .findFirst()
+            .orElse(null);
+
+    if (aiPlayer == null) {
+        return response;
+    }
+
+    runAiTurn(game, aiPlayer);
+
+    Game updatedGame = gameRepository.findById(game.getGameId()).orElse(game);
+    return mapToResponse(updatedGame);
+}
+
+private void runAiTurn(Game game, GamePlayer aiPlayer) {
+    String difficulty = game.getAiDifficulty() == null ? "NORMAL" : game.getAiDifficulty().toUpperCase();
+
+    if (tryAiPlacePiece(game, aiPlayer, difficulty)) {
+        return;
+    }
+
+    if (tryAiMoveStack(game, aiPlayer, difficulty)) {
+        return;
+    }
+
+    throw new IllegalStateException("AI could not find a legal move");
+}
+
+private boolean tryAiPlacePiece(Game game, GamePlayer aiPlayer, String difficulty) {
+    List<int[]> emptyCells = new ArrayList<>();
+    for (int row = 0; row < game.getBoardSize(); row++) {
+        for (int col = 0; col < game.getBoardSize(); col++) {
+            if (game.getBoard().getStack(row, col).isEmpty()) {
+                emptyCells.add(new int[]{row, col});
+            }
+        }
+    }
+
+    if (emptyCells.isEmpty()) {
+        return false;
+    }
+
+    orderCellsByDifficulty(emptyCells, game, aiPlayer, difficulty);
+    List<String> pieceTypes = buildAiPiecePriority(aiPlayer, difficulty);
+
+    for (int[] cell : emptyCells) {
+        for (String pieceType : pieceTypes) {
+            try {
+                placePiece(game.getGameId(), aiPlayer.getPlayerId(), cell[0], cell[1], pieceType);
+                return true;
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    return false;
+}
+
+private boolean tryAiMoveStack(Game game, GamePlayer aiPlayer, String difficulty) {
+    List<AiMoveCandidate> candidates = new ArrayList<>();
+
+    for (int row = 0; row < game.getBoardSize(); row++) {
+        for (int col = 0; col < game.getBoardSize(); col++) {
+            Stack stack = game.getBoard().getStack(row, col);
+            if (stack.isEmpty() || stack.getTopPiece() == null) {
+                continue;
+            }
+
+            if (!aiPlayer.getColor().equals(stack.getTopPiece().getColor().name())) {
+                continue;
+            }
+
+            int maxPickup = Math.min(stack.size(), game.getBoardSize());
+            int pickupLimit = switch (difficulty) {
+                case "EASY" -> 1;
+                case "NORMAL" -> Math.min(2, maxPickup);
+                default -> maxPickup;
+            };
+            for (int pickup = 1; pickup <= pickupLimit; pickup++) {
+                addMoveCandidateIfInside(candidates, game, aiPlayer, row, col, "UP", row - 1, col, pickup, difficulty);
+                addMoveCandidateIfInside(candidates, game, aiPlayer, row, col, "DOWN", row + 1, col, pickup, difficulty);
+                addMoveCandidateIfInside(candidates, game, aiPlayer, row, col, "LEFT", row, col - 1, pickup, difficulty);
+                addMoveCandidateIfInside(candidates, game, aiPlayer, row, col, "RIGHT", row, col + 1, pickup, difficulty);
+            }
+        }
+    }
+
+    if (candidates.isEmpty()) {
+        return false;
+    }
+
+    if ("EASY".equals(difficulty)) {
+        Collections.shuffle(candidates, random);
+    } else {
+        candidates.sort((a, b) -> Integer.compare(b.score, a.score));
+    }
+
+    for (AiMoveCandidate candidate : candidates) {
+        try {
+            moveStack(
+                    game.getGameId(),
+                    aiPlayer.getPlayerId(),
+                    candidate.fromRow,
+                    candidate.fromCol,
+                    candidate.direction,
+                    candidate.pickupCount,
+                    List.of(candidate.pickupCount)
+            );
+            return true;
+        } catch (Exception ignored) {
+        }
+    }
+
+    return false;
+}
+
+private void addMoveCandidateIfInside(List<AiMoveCandidate> candidates,
+                                      Game game,
+                                      GamePlayer aiPlayer,
+                                      int fromRow,
+                                      int fromCol,
+                                      String direction,
+                                      int toRow,
+                                      int toCol,
+                                      int pickupCount,
+                                      String difficulty) {
+    if (!isInsideBoard(game, toRow, toCol)) {
+        return;
+    }
+
+    int score = scoreCellForAi(game, aiPlayer, toRow, toCol);
+    if ("HARD".equals(difficulty)) {
+        score += pickupCount;
+    }
+
+    candidates.add(new AiMoveCandidate(
+            fromRow,
+            fromCol,
+            direction,
+            pickupCount,
+            List.of(pickupCount),
+            score
+    ));
+}
+
+private List<String> buildAiPiecePriority(GamePlayer aiPlayer, String difficulty) {
+    List<String> pieceTypes = new ArrayList<>();
+
+    if (aiPlayer.getRemainingFlats() > 0) {
+        pieceTypes.add("FLAT");
+        pieceTypes.add("STANDING");
+    }
+
+    if (aiPlayer.getRemainingCapstones() > 0) {
+        pieceTypes.add("CAPSTONE");
+    }
+
+    if ("EASY".equals(difficulty)) {
+        Collections.shuffle(pieceTypes, random);
+    } else if ("HARD".equals(difficulty) && pieceTypes.contains("CAPSTONE")) {
+        pieceTypes.remove("CAPSTONE");
+        pieceTypes.add(0, "CAPSTONE");
+    }
+
+    return pieceTypes;
+}
+
+private void orderCellsByDifficulty(List<int[]> cells, Game game, GamePlayer aiPlayer, String difficulty) {
+    if ("EASY".equals(difficulty)) {
+        Collections.shuffle(cells, random);
+        return;
+    }
+
+    cells.sort((a, b) -> Integer.compare(
+            scoreCellForAi(game, aiPlayer, b[0], b[1]),
+            scoreCellForAi(game, aiPlayer, a[0], a[1])
+    ));
+}
+
+private int scoreCellForAi(Game game, GamePlayer aiPlayer, int row, int col) {
+    int sameColorAdj = 0;
+    int[][] dirs = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+    for (int[] dir : dirs) {
+        int nr = row + dir[0];
+        int nc = col + dir[1];
+        if (!isInsideBoard(game, nr, nc)) {
+            continue;
+        }
+        Stack stack = game.getBoard().getStack(nr, nc);
+        if (stack.isEmpty() || stack.getTopPiece() == null) {
+            continue;
+        }
+        if (aiPlayer.getColor().equals(stack.getTopPiece().getColor().name())) {
+            sameColorAdj++;
+        }
+    }
+
+    int center = game.getBoardSize() / 2;
+    int distanceToCenter = Math.abs(row - center) + Math.abs(col - center);
+    return sameColorAdj * 10 - distanceToCenter;
+}
+
+private static class AiMoveCandidate {
+    private final int fromRow;
+    private final int fromCol;
+    private final String direction;
+    private final int pickupCount;
+    private final List<Integer> drops;
+    private final int score;
+
+    private AiMoveCandidate(int fromRow,
+                            int fromCol,
+                            String direction,
+                            int pickupCount,
+                            List<Integer> drops,
+                            int score) {
+        this.fromRow = fromRow;
+        this.fromCol = fromCol;
+        this.direction = direction;
+        this.pickupCount = pickupCount;
+        this.drops = drops;
+        this.score = score;
+    }
 }
 private void flattenStandingIfNeeded(Stack targetStack, List<Piece> toDrop, boolean isLastDrop) {
     if (targetStack.isEmpty()) {

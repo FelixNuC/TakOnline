@@ -20,10 +20,16 @@ private Board board;
 private LocalDateTime createdAt;
 private String winnerColor;
 private Set<String> rematchPlayerIds;
+private boolean vsAi;
+private String aiDifficulty;
     public Game() {
     }
 
     public Game(String roomCode, List<GamePlayer> players, int boardSize) {
+        this(roomCode, players, boardSize, false, null);
+    }
+
+    public Game(String roomCode, List<GamePlayer> players, int boardSize, boolean vsAi, String aiDifficulty) {
         this.gameId = UUID.randomUUID().toString();
         this.roomCode = roomCode;
         this.players = players;
@@ -34,6 +40,8 @@ private Set<String> rematchPlayerIds;
         this.board = new Board(boardSize);
         this.winnerColor = null;
         this.rematchPlayerIds = new HashSet<>();
+        this.vsAi = vsAi;
+        this.aiDifficulty = aiDifficulty;
     }
 
     public String getGameId() {
@@ -91,6 +99,14 @@ public Set<String> getRematchPlayerIds() {
 
 public boolean addRematchVote(String playerId) {
     return rematchPlayerIds.add(playerId);
+}
+
+public boolean isVsAi() {
+    return vsAi;
+}
+
+public String getAiDifficulty() {
+    return aiDifficulty;
 }
 
 public void resetForRematch(List<GamePlayer> players) {

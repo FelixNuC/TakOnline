@@ -7,15 +7,21 @@ public class GamePlayer {
     private String color;
     private int remainingFlats;
     private int remainingCapstones;
+    private boolean bot;
     public GamePlayer() {
     }
 
     public GamePlayer(String playerId, String playerName, String color, int flats, int capstones) {
+        this(playerId, playerName, color, flats, capstones, false);
+    }
+
+    public GamePlayer(String playerId, String playerName, String color, int flats, int capstones, boolean bot) {
         this.playerId = playerId;
         this.playerName = playerName;
         this.color = color;
         this.remainingFlats = flats;
         this.remainingCapstones = capstones;
+        this.bot = bot;
     }
 
     public String getPlayerId() {
@@ -36,6 +42,10 @@ public class GamePlayer {
 
 public int getRemainingCapstones() {
     return remainingCapstones;
+}
+
+public boolean isBot() {
+    return bot;
 }
 
 public void useFlat() {
