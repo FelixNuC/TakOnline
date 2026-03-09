@@ -60,6 +60,8 @@ List<GamePlayer> players = room.getPlayers().stream()
 
         Game game = new Game(roomCode, players, room.getBoardSize(), room.isVsAi(), room.getAiDifficulty());
         gameRepository.save(game);
+        room.markInGame();
+        roomRepository.save(room);
 
         GameResponse response = mapToResponse(game);
         publishGameUpdate(response);

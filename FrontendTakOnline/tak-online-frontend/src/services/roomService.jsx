@@ -1,5 +1,25 @@
 const API_BASE_URL = "http://localhost:8080";
 
+async function toServiceError(response, fallbackMessage) {
+  const rawText = await response.text();
+  let message = rawText || fallbackMessage;
+
+  try {
+    const parsed = JSON.parse(rawText);
+    if (parsed?.error) {
+      message = parsed.error;
+    } else if (parsed?.message) {
+      message = parsed.message;
+    }
+  } catch {
+    // Ignore non-JSON error payloads.
+  }
+
+  const error = new Error(message || fallbackMessage);
+  error.status = response.status;
+  throw error;
+}
+
 export async function createRoom(playerName, boardSize = 5, gameMode = "PVP", aiDifficulty = "NORMAL") {
   const response = await fetch(`${API_BASE_URL}/api/rooms`, {
     method: "POST",
@@ -15,8 +35,7 @@ export async function createRoom(playerName, boardSize = 5, gameMode = "PVP", ai
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Error creating room");
+    await toServiceError(response, "Error creating room");
   }
 
   return await response.json();
@@ -34,8 +53,7 @@ export async function joinRoom(code, playerName) {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Error joining room");
+    await toServiceError(response, "Error joining room");
   }
 
   return await response.json();
@@ -45,8 +63,7 @@ export async function getRoom(code) {
   const response = await fetch(`${API_BASE_URL}/api/rooms/${code}`);
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Error loading room");
+    await toServiceError(response, "Error loading room");
   }
 
   return await response.json();

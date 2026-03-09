@@ -17,7 +17,7 @@
   width: 100%;
   max-width: 960px;
   margin: 0 auto;
-  padding-top: 32px;
+
 }
 
 .room-close-button {
@@ -116,7 +116,7 @@
 }
 
 .room-info-grid {
-  margin-top: 24px;
+  margin-top: 15px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
@@ -126,7 +126,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 22px;
-  padding: 22px;
+  padding: 20px;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
@@ -167,11 +167,11 @@
 
 .players-card,
 .room-state-card {
-  margin-top: 24px;
+  margin-top: 15px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 28px;
-  padding: 28px;
+  padding: 20px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05);
 }
 
@@ -247,23 +247,24 @@
 }
 
 @media (max-width: 640px) {
+
   .room-page {
-    padding: 20px;
+    padding: 0 20px;
   }
 
   .room-close-button {
-    top: 72px;
-    left: 16px;
+    top: 30px;
+    left: 290px;
   }
 
   .room-shell {
-    padding-top: 48px;
+    padding-top: 10px;
   }
 
   .room-hero,
   .players-card,
   .room-state-card {
-    padding: 22px;
+    padding: 20px;
   }
 
   .room-code {
@@ -272,6 +273,23 @@
 
   .copy-button {
     width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .room-page.in-lobby {
+    height: auto;
+    min-height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .room-page.in-lobby .room-close-button {
+    position: static;
+    margin: 8px 0 2px 2px;
+  }
+
+  .room-page.in-lobby .room-shell {
+    padding-top: 10px;
   }
 }
 
@@ -561,6 +579,7 @@
   background: #1f1f1f;
   transform: rotate(45deg);
   border-radius: 3px;
+  border: solid 1px white;
 }
 
 .game-board-wrapper {

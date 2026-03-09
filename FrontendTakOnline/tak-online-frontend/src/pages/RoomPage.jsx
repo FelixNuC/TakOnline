@@ -44,8 +44,12 @@ function RoomPage() {
         const roomData = await getRoom(roomCode);
         setRoom(roomData);
       } catch (err) {
-        console.error(err);
-        setError("Could not load room");
+        if (err?.status === 404) {
+          setError("This room no longer exists. Please create a new room.");
+        } else {
+          console.error(err);
+          setError("Could not load room");
+        }
       } finally {
         setLoading(false);
       }
@@ -68,30 +72,46 @@ function RoomPage() {
 
   useEffect(() => {
     async function loadExistingGame() {
+      if (room?.status !== "IN_GAME" || game) return;
+
       try {
         await refreshGame();
       } catch {
-        // Si todavía no existe partida, no hacemos nada
-        console.log("No existing game yet for this room");
+        // If it still is not available, polling will retry.
       }
     }
 
     loadExistingGame();
-  }, [refreshGame]);
+  }, [refreshGame, room?.status, game]);
 
   useEffect(() => {
+    if (error) return undefined;
+    if (game) return undefined;
+
     let isCancelled = false;
 
     async function syncRoomState() {
+      let roomData = null;
+
       try {
-        const roomData = await getRoom(roomCode);
+        roomData = await getRoom(roomCode);
         if (!isCancelled) {
           setRoom(roomData);
         }
       } catch (err) {
         if (!isCancelled) {
+          if (err?.status === 404) {
+            setRoom(null);
+            setError("This room is no longer available.");
+            return;
+          }
+
           console.error("Could not refresh room in real time", err);
         }
+      }
+
+      if (!roomData || roomData.status !== "IN_GAME") {
+        return;
       }
 
       try {
@@ -100,17 +120,18 @@ function RoomPage() {
           setGame(gameData);
         }
       } catch {
-        // Puede no existir aún, ignoramos
+        // It may take a moment to become available after IN_GAME.
       }
     }
 
+    syncRoomState();
     const intervalId = setInterval(syncRoomState, 1000);
 
     return () => {
       isCancelled = true;
       clearInterval(intervalId);
     };
-  }, [roomCode]);
+  }, [roomCode, game, error]);
 
   const players = room?.players || [];
   const isReady = players.length >= 2;

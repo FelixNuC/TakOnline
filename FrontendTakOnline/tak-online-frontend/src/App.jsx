@@ -35,8 +35,10 @@ function App() {
 
   return (
     <BrowserRouter>
-      <GlobalNav />
-      <ThemeToggle isDark={isDarkTheme} onToggle={handleThemeToggle} />
+      <div className="app-top-controls">
+        <GlobalNav />
+        <ThemeToggle isDark={isDarkTheme} onToggle={handleThemeToggle} />
+      </div>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/room/:roomCode" element={<RoomPage />} />

@@ -76,6 +76,10 @@ public Room(String code, String hostPlayerName, int boardSize, boolean vsAi, Str
         return status;
     }
 
+    public void markInGame() {
+        this.status = RoomStatus.IN_GAME;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }

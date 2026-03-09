@@ -214,6 +214,48 @@ function GameView({ game, currentPlayer, onGameUpdate }) {
     return actionMode === "PLACE" && isMyTurn && !isFinished && !cell.stack?.length;
   }
 
+  async function submitMoveToTarget(targetCell) {
+    if (!moveOrigin || !targetCell) return;
+
+    const parsedPickup = Number(pickupCount);
+    if (!Number.isInteger(parsedPickup) || parsedPickup <= 0) {
+      setActionError("pickup debe ser un entero mayor que 0.");
+      return;
+    }
+
+    const moveVector = getMoveVector(moveOrigin, targetCell);
+    if (!moveVector) {
+      setActionError("Mueve en linea recta (sin diagonales).");
+      return;
+    }
+
+    if (parsedPickup < moveVector.distance) {
+      setActionError("pickup debe ser mayor o igual a la distancia.");
+      return;
+    }
+
+    const drops = buildAutoDrops(parsedPickup, moveVector.distance);
+
+    try {
+      setSubmitting(true);
+      const updatedGame = await moveStack(game.gameId, {
+        playerId: me.playerId,
+        fromRow: moveOrigin.row,
+        fromCol: moveOrigin.col,
+        direction: moveVector.direction,
+        pickupCount: parsedPickup,
+        drops,
+      });
+      setMoveOrigin(null);
+      setSelectedCell(null);
+      onGameUpdate?.(updatedGame);
+    } catch (err) {
+      setActionError(getFriendlyActionError(err, "MOVE"));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function handleCellSelection(cell) {
     setSelectedCell(cell);
     setActionError("");
@@ -258,6 +300,19 @@ function GameView({ game, currentPlayer, onGameUpdate }) {
       } finally {
         setSubmitting(false);
       }
+      return;
+    }
+
+    if (moveOrigin) {
+      const sameCell = moveOrigin.row === cell.row && moveOrigin.col === cell.col;
+      if (sameCell) return;
+
+      if (isCellControlledByMe(cell)) {
+        setMoveOrigin(cell);
+        return;
+      }
+
+      await submitMoveToTarget(cell);
       return;
     }
 
@@ -309,44 +364,7 @@ function GameView({ game, currentPlayer, onGameUpdate }) {
 
     setDropTargetKey(null);
     setDragSourceKey(null);
-
-    const parsedPickup = Number(pickupCount);
-    if (!Number.isInteger(parsedPickup) || parsedPickup <= 0) {
-      setActionError("pickup debe ser un entero mayor que 0.");
-      return;
-    }
-
-    const moveVector = getMoveVector(moveOrigin, targetCell);
-    if (!moveVector) {
-      setActionError("Arrastra en linea recta (sin diagonales).");
-      return;
-    }
-
-    if (parsedPickup < moveVector.distance) {
-      setActionError("pickup debe ser mayor o igual a la distancia del arrastre.");
-      return;
-    }
-
-    const drops = buildAutoDrops(parsedPickup, moveVector.distance);
-
-    try {
-      setSubmitting(true);
-      const updatedGame = await moveStack(game.gameId, {
-        playerId: me.playerId,
-        fromRow: moveOrigin.row,
-        fromCol: moveOrigin.col,
-        direction: moveVector.direction,
-        pickupCount: parsedPickup,
-        drops,
-      });
-      setMoveOrigin(null);
-      setSelectedCell(null);
-      onGameUpdate?.(updatedGame);
-    } catch (err) {
-      setActionError(getFriendlyActionError(err, "MOVE"));
-    } finally {
-      setSubmitting(false);
-    }
+    await submitMoveToTarget(targetCell);
   }
 
   function handleEndDrag() {
@@ -462,7 +480,7 @@ function GameView({ game, currentPlayer, onGameUpdate }) {
             <div className="side-panel-block">
               <div className="side-title">Mover stack</div>
               <p className="side-help-text">
-                Arrastra un stack propio y sueltalo en una casilla del mismo eje (fila o columna).
+                Arrastra o toca: selecciona un stack propio y luego la casilla destino en el mismo eje.
               </p>
               {moveOrigin && (
                 <p className="side-help-text">
