@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import HomeMenu from "../components/home/HomeMenu";
+import KoFiButton from "../components/common/KoFiButton";
 import "../styles/home.css";
 
 function HomePage() {
@@ -141,6 +142,7 @@ function HomePage() {
         <p className="home-subtitle">Create a room or join an existing match</p>
         <HomeMenu />
       </div>
+      <KoFiButton />
     </div>
   );
 }

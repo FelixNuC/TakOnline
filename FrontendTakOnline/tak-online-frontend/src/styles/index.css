@@ -231,7 +231,7 @@ h3,
 .contact-form textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 15%, transparent);
+ /* box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 15%, transparent);*/
 }
 
 .contact-send {
@@ -371,4 +371,22 @@ h3,
     transition: none !important;
     animation: none !important;
   }
+}
+
+.kofi-fixed-button {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 940;
+  display: inline-block;
+  line-height: 0;
+  border: 0;
+  background: transparent;
+  text-decoration: none;
+}
+
+.kofi-fixed-image {
+  display: block;
+  height: 36px;
+  border: 0;
 }

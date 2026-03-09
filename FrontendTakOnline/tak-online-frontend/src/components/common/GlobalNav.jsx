@@ -108,6 +108,16 @@ function GlobalNav() {
                   />
                   Sugerencia
                 </label>
+                                <label>
+                  <input
+                    type="radio"
+                    name="topic"
+                    value="OTHER"
+                    checked={topic === "OTHER"}
+                    onChange={(event) => setTopic(event.target.value)}
+                  />
+                  Other
+                </label>
               </div>
 
               <label htmlFor="contact-reporter-email">Tu correo</label>

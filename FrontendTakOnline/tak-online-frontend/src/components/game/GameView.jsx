@@ -3,6 +3,7 @@ import { moveStack, placePiece, requestRematch } from "../../services/gameServic
 import { getNodeKey } from "../../utils/boardLayout";
 import GameBoard from "./GameBoard";
 import StackPreviewBar from "./StackPreviewBar";
+import KoFiButton from "../common/KoFiButton";
 
 function normalizeBoard(game) {
   const boardSize = game?.boardSize || 5;
@@ -534,6 +535,7 @@ function GameView({ game, currentPlayer, onGameUpdate }) {
           </div>
         </div>
       </div>
+      <KoFiButton />
     </div>
   );
 }

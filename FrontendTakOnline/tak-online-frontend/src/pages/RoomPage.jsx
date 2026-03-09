@@ -205,9 +205,12 @@ function RoomPage() {
     }
   };
 
+  const lobbyPageClassName = "room-page in-lobby";
+  const gamePageClassName = "room-page in-game";
+
   if (loading) {
     return (
-      <div className="room-page">
+      <div className={lobbyPageClassName}>
         <button
           className="room-close-button"
           onClick={handleLeaveRoom}
@@ -225,7 +228,7 @@ function RoomPage() {
 
   if (error && !room) {
     return (
-      <div className="room-page">
+      <div className={lobbyPageClassName}>
         <button
           className="room-close-button"
           onClick={handleLeaveRoom}
@@ -244,7 +247,7 @@ function RoomPage() {
 
   if (game) {
     return (
-      <div className="room-page">
+      <div className={gamePageClassName}>
         <button
           className="room-close-button"
           onClick={handleLeaveRoom}
@@ -265,7 +268,7 @@ function RoomPage() {
   }
 
   return (
-    <div className="room-page">
+    <div className={lobbyPageClassName}>
       <button
         className="room-close-button"
         onClick={handleLeaveRoom}
