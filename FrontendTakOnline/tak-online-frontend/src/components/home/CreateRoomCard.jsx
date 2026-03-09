@@ -1,10 +1,11 @@
 ﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createRoom } from "../../services/roomService";
+import { getStoredNickname, resolveNickname, saveNickname } from "../../utils/playerIdentity";
 import { CreateRoomIcon } from "../common/ArtDecoIcons";
 
 function CreateRoomCard({ isActive, onOpen, onClose }) {
-  const [nickname, setNickname] = useState("");
+  const [nickname, setNickname] = useState(() => getStoredNickname());
   const [boardSize, setBoardSize] = useState(5);
   const [gameMode, setGameMode] = useState("PVP");
   const [aiDifficulty, setAiDifficulty] = useState("NORMAL");
@@ -16,22 +17,27 @@ function CreateRoomCard({ isActive, onOpen, onClose }) {
     e.preventDefault();
     setError("");
 
+    const effectiveNickname = resolveNickname(nickname);
+
     try {
       setLoading(true);
 
       const room = await createRoom(
-        nickname,
+        effectiveNickname,
         Number(boardSize),
         gameMode,
         aiDifficulty
       );
       console.log("Room created:", room);
-      const player = room?.players?.find((p) => p.playerName === nickname) || null;
+      const player = room?.players?.find((p) => p.playerName === effectiveNickname) || null;
+
+      saveNickname(effectiveNickname);
+      setNickname(effectiveNickname);
 
       navigate(`/room/${room.roomCode}`, {
         state: {
           room,
-          playerName: nickname,
+          playerName: effectiveNickname,
           playerId: player?.playerId || null,
           player,
         },
@@ -70,8 +76,7 @@ function CreateRoomCard({ isActive, onOpen, onClose }) {
               type="text"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              placeholder="Enter your nickname"
-              required
+              placeholder="Opcional"
             />
 
             <label htmlFor="board-size">Board size</label>

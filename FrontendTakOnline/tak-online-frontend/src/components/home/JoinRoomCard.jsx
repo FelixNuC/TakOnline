@@ -1,10 +1,11 @@
 ﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { joinRoom } from "../../services/roomService";
+import { getStoredNickname, resolveNickname, saveNickname } from "../../utils/playerIdentity";
 import { JoinRoomIcon } from "../common/ArtDecoIcons";
 
 function JoinRoomCard({ isActive, onOpen, onClose }) {
-  const [nickname, setNickname] = useState("");
+  const [nickname, setNickname] = useState(() => getStoredNickname());
   const [roomCode, setRoomCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -14,17 +15,22 @@ function JoinRoomCard({ isActive, onOpen, onClose }) {
     e.preventDefault();
     setError("");
 
+    const effectiveNickname = resolveNickname(nickname);
+
     try {
       setLoading(true);
 
-      const room = await joinRoom(roomCode, nickname);
+      const room = await joinRoom(roomCode, effectiveNickname);
       console.log("Joined room:", room);
       const player = room?.players?.[room.players.length - 1] || null;
+
+      saveNickname(effectiveNickname);
+      setNickname(effectiveNickname);
 
       navigate(`/room/${room.roomCode}`, {
         state: {
           room,
-          playerName: nickname,
+          playerName: effectiveNickname,
           playerId: player?.playerId || null,
           player,
         },
@@ -63,8 +69,7 @@ function JoinRoomCard({ isActive, onOpen, onClose }) {
               type="text"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              placeholder="Enter your nickname"
-              required
+              placeholder="Opcional"
             />
 
             <label htmlFor="join-room-code">Room code</label>

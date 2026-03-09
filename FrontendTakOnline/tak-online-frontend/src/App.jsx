@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import RoomPage from "./pages/RoomPage";
 import ThemeToggle from "./components/common/ThemeToggle";
+import GlobalNav from "./components/common/GlobalNav";
 
 function App() {
   const getInitialTheme = useMemo(
@@ -34,6 +35,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <GlobalNav />
       <ThemeToggle isDark={isDarkTheme} onToggle={handleThemeToggle} />
       <Routes>
         <Route path="/" element={<HomePage />} />
