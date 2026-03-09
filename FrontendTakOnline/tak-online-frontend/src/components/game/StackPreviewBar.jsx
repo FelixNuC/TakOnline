@@ -13,13 +13,18 @@ function StackPreviewBar({ selectedCell }) {
         Selected stack at ({selectedCell.row}, {selectedCell.col})
       </div>
 
+      <div className="stack-preview-labels" aria-hidden="true">
+        <span>Base</span>
+        <span>Top</span>
+      </div>
+
       <div className="stack-preview-pieces">
         {selectedCell.stack.map((piece, index) => (
-          <div key={index} className="stack-preview-piece">
+          <div
+            key={index}
+            className={`stack-preview-piece ${index === 0 ? "is-bottom" : ""} ${index === selectedCell.stack.length - 1 ? "is-top" : ""}`}
+          >
             <span className={`mini-piece ${piece.color === "BLACK" ? "black" : "white"}`} />
-            <span>
-              {piece.color} {piece.type || "FLAT"}
-            </span>
           </div>
         ))}
       </div>

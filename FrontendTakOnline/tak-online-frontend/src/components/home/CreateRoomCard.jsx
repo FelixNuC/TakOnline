@@ -1,6 +1,7 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createRoom } from "../../services/roomService";
+import { CreateRoomIcon } from "../common/ArtDecoIcons";
 
 function CreateRoomCard({ isActive, onOpen, onClose }) {
   const [nickname, setNickname] = useState("");
@@ -47,14 +48,18 @@ function CreateRoomCard({ isActive, onOpen, onClose }) {
     <div className={`menu-card ${isActive ? "active" : ""}`}>
       {!isActive ? (
         <button className="menu-button" onClick={onOpen}>
+          <CreateRoomIcon className="menu-card-icon" />
           Create room
         </button>
       ) : (
         <div className="menu-card-content">
           <div className="menu-card-header">
-            <h2>Create room</h2>
+            <h2>
+              <CreateRoomIcon className="menu-card-header-icon" />
+              <span>Create room</span>
+            </h2>
             <button className="close-button" onClick={onClose} type="button">
-              ×
+              &times;
             </button>
           </div>
 

@@ -1,6 +1,7 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { joinRoom } from "../../services/roomService";
+import { JoinRoomIcon } from "../common/ArtDecoIcons";
 
 function JoinRoomCard({ isActive, onOpen, onClose }) {
   const [nickname, setNickname] = useState("");
@@ -40,14 +41,18 @@ function JoinRoomCard({ isActive, onOpen, onClose }) {
     <div className={`menu-card ${isActive ? "active" : ""}`}>
       {!isActive ? (
         <button className="menu-button" onClick={onOpen}>
+          <JoinRoomIcon className="menu-card-icon" />
           Join room
         </button>
       ) : (
         <div className="menu-card-content">
           <div className="menu-card-header">
-            <h2>Join room</h2>
+            <h2>
+              <JoinRoomIcon className="menu-card-header-icon" />
+              <span>Join room</span>
+            </h2>
             <button className="close-button" onClick={onClose} type="button">
-              ×
+              &times;
             </button>
           </div>
 

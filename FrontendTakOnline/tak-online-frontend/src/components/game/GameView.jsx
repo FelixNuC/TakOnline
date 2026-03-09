@@ -44,6 +44,41 @@ function buildAutoDrops(pickupCount, distance) {
   return drops;
 }
 
+function getFriendlyActionError(error, actionType) {
+  const rawMessage = typeof error?.message === "string" ? error.message.trim() : "";
+  if (!rawMessage) {
+    if (actionType === "MOVE") return "Movimiento invalido. Prueba con otro stack o destino.";
+    if (actionType === "PLACE") return "No se pudo colocar la pieza. Intenta otra jugada.";
+    return "No se pudo completar la accion.";
+  }
+
+  const lowerMessage = rawMessage.toLowerCase();
+  const looksLikeBackendPayload =
+    rawMessage.startsWith("{") ||
+    lowerMessage.includes('"timestamp"') ||
+    lowerMessage.includes('"status"') ||
+    lowerMessage.includes("internal server error");
+
+  if (actionType === "MOVE") {
+    if (
+      lowerMessage.includes("capstone") ||
+      (looksLikeBackendPayload && lowerMessage.includes('/moves/stack'))
+    ) {
+      return "Movimiento invalido: no puedes apilar una ficha sobre una capstone enemiga.";
+    }
+
+    if (looksLikeBackendPayload) {
+      return "Movimiento invalido. Revisa el origen, destino y cantidad de fichas.";
+    }
+  }
+
+  if (actionType === "PLACE" && looksLikeBackendPayload) {
+    return "No se pudo colocar la pieza en esa casilla.";
+  }
+
+  return rawMessage;
+}
+
 function GameView({ game, currentPlayer, onGameUpdate }) {
   const [selectedCell, setSelectedCell] = useState(null);
   const [actionMode, setActionMode] = useState("PLACE");
@@ -55,6 +90,7 @@ function GameView({ game, currentPlayer, onGameUpdate }) {
   const [actionError, setActionError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [rematchSubmitting, setRematchSubmitting] = useState(false);
+  const [winSparklesBurstId, setWinSparklesBurstId] = useState(0);
 
   const cells = useMemo(() => normalizeBoard(game), [game]);
   const cellMap = useMemo(() => {
@@ -92,6 +128,12 @@ function GameView({ game, currentPlayer, onGameUpdate }) {
     if (!me?.color || !game?.winnerColor) return "Game finished";
     return game.winnerColor === me.color ? "You win" : "You lose";
   }, [game?.winnerColor, isFinished, me?.color]);
+
+  useEffect(() => {
+    if (isFinished) {
+      setWinSparklesBurstId((current) => current + 1);
+    }
+  }, [isFinished]);
 
   const availablePieceTypes = useMemo(() => {
     const types = [];
@@ -211,7 +253,7 @@ function GameView({ game, currentPlayer, onGameUpdate }) {
         });
         onGameUpdate?.(updatedGame);
       } catch (err) {
-        setActionError(err.message || "No se pudo colocar la pieza.");
+        setActionError(getFriendlyActionError(err, "PLACE"));
       } finally {
         setSubmitting(false);
       }
@@ -300,7 +342,7 @@ function GameView({ game, currentPlayer, onGameUpdate }) {
       setSelectedCell(null);
       onGameUpdate?.(updatedGame);
     } catch (err) {
-      setActionError(err.message || "No se pudo mover el stack.");
+      setActionError(getFriendlyActionError(err, "MOVE"));
     } finally {
       setSubmitting(false);
     }
@@ -322,7 +364,7 @@ function GameView({ game, currentPlayer, onGameUpdate }) {
       });
       onGameUpdate?.(updatedGame);
     } catch (err) {
-      setActionError(err.message || "No se pudo solicitar rematch.");
+      setActionError(getFriendlyActionError(err, "REMATCH"));
     } finally {
       setRematchSubmitting(false);
     }
@@ -339,11 +381,6 @@ function GameView({ game, currentPlayer, onGameUpdate }) {
         <div className="game-hud-card">
           <span className="hud-label">Turn</span>
           <span className="hud-value">{game?.currentTurnColor}</span>
-        </div>
-
-        <div className="game-hud-card">
-          <span className="hud-label">State</span>
-          <span className="hud-value">{game?.state}</span>
         </div>
       </div>
 
@@ -468,6 +505,16 @@ function GameView({ game, currentPlayer, onGameUpdate }) {
             />
             {isFinished && (
               <div className="game-finish-overlay">
+                <div className="win-sparkles" aria-hidden="true" key={winSparklesBurstId}>
+                  <span className="win-sparkle w1" />
+                  <span className="win-sparkle w2" />
+                  <span className="win-sparkle w3" />
+                  <span className="win-sparkle w4" />
+                  <span className="win-sparkle w5" />
+                  <span className="win-sparkle w6" />
+                  <span className="win-sparkle w7" />
+                  <span className="win-sparkle w8" />
+                </div>
                 <div className="game-finish-card">
                   <p className="game-finish-title">{winnerResultLabel}</p>
                   <p className="game-finish-subtitle">
